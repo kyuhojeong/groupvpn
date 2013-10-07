@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import socket, select, json, time, sys, hashlib
+import socket, select, json, time, sys, hashlib, logging
 
 STUN = "stun.l.google.com:19302"
 TURN = ""
@@ -15,6 +15,8 @@ UID_SIZE = 40
 SEC = True
 WAIT_TIME = 30
 BUF_SIZE = 4096
+
+logging.basicConfig(level=logging.DEBUG)
 
 def gen_ip6(uid, ip6=IP6_PREFIX):
     for i in range(0, 16, 4): ip6 += ":" + uid[i:i+4]
@@ -35,17 +37,18 @@ def make_call(sock, **params):
     else: dest = (LOCALHOST, SVPN_PORT)
     return sock.sendto(json.dumps(params), dest)
 
-def do_set_callback(sock, addr):
-    return make_call(sock, m="set_callback", ip=addr[0], port=addr[1])
+def do_set_cb_endpoint(sock, addr):
+    return make_call(sock, m="set_cb_endpoint", ip=addr[0], port=addr[1])
 
 def do_register_service(sock, username, password, host):
     return make_call(sock, m="register_service", username=username,
                      password=password, host=host)
 
-def do_create_link(sock, uid, fpr, nid, sec, cas, stun=STUN, turn=TURN):
-    return make_call(sock, m="create_link", uid=uid, fpr=fpr, nid=nid,
-                     stun=stun, turn=turn, turn_user=TURN_USER,
-                     turn_pass=TURN_PASS, sec=sec, cas=cas)
+def do_create_link(sock, uid, fpr, overlay_id, sec, cas, stun=STUN, turn=TURN):
+    return make_call(sock, m="create_link", uid=uid, fpr=fpr,
+                     overlay_id=overlay_id, stun=stun, turn=turn,
+                     turn_user=TURN_USER, turn_pass=TURN_PASS, 
+                     sec=sec, cas=cas)
 
 def do_trim_link(sock, uid):
     return make_call(sock, m="trim_link", uid=uid)
@@ -60,6 +63,9 @@ def do_set_remote_ip(sock, uid, ip4, ip6):
 def do_get_state(sock):
     return make_call(sock, m="get_state")
 
+def do_set_logging(sock):
+    return make_call(sock, m="set_logging", flag=1)
+
 class UdpServer:
     def __init__(self, user, password, host, ip4):
         self.state = {}
@@ -70,7 +76,8 @@ class UdpServer:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("", CONTROLLER_PORT))
         uid = gen_uid(ip4)
-        do_set_callback(self.sock, self.sock.getsockname())
+        do_set_logging(self.sock)
+        do_set_cb_endpoint(self.sock, self.sock.getsockname())
         do_set_local_ip(self.sock, uid, ip4, gen_ip6(uid))
         do_register_service(self.sock, user, password, host)
         do_get_state(self.sock)
@@ -90,14 +97,15 @@ class UdpServer:
             data, addr = sock.recvfrom(BUF_SIZE)
             if data[0] == '{':
                 msg = json.loads(data)
-                print "recv %s %s" % (addr, data)
+                logging.debug("recv %s %s" % (addr, data))
+                msg_type = msg.get("type", None)
 
-                if "_fpr" in msg: self.state = msg; continue
-                if isinstance(msg, dict) and "uid" in msg and "status" in msg:
-                    self.peers[msg["uid"]] = msg; continue
-
-                fpr_len = len(self.state["_fpr"])
-                if "data" in msg and len(msg["data"]) >= fpr_len:
+                if msg_type == "local_state": self.state = msg
+                elif msg_type == "peer_state": self.peers[msg["uid"]] = msg
+                # we ignore connection status notification for now
+                elif msg_type == "con_stat": pass
+                elif msg_type == "con_req" or msg_type == "con_resp":
+                    fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
                     cas = msg["data"][fpr_len + 1:]
                     ip4 = get_ip4(msg["uid"], self.state["_ip4"])
