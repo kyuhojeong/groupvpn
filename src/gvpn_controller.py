@@ -11,22 +11,6 @@ import socket
 import sys
 import time
 
-"""
-STUN = "stun.l.google.com:19302"
-TURN = ""
-TURN_USER = ""
-TURN_PASS = ""
-IP6_PREFIX = "fd50:0dbc:41f2:4a3c"
-LOCALHOST= "127.0.0.1"
-LOCALHOST6= "::1"
-SVPN_PORT = 5800
-CONTROLLER_PORT = 5801
-UID_SIZE = 40
-SEC = True
-WAIT_TIME = 30
-BUF_SIZE = 4096
-"""
-
 # Set default config values
 CONFIG = {
     "stun": ["stun.l.google.com:19302", "stun1.l.google.com:19302",
