@@ -34,7 +34,6 @@ CONFIG = {
     "buf_size": 4096,
 }
 
-
 logging.basicConfig(level=logging.DEBUG)
 
 def gen_ip6(uid, ip6=None):
@@ -149,7 +148,7 @@ class UdpServer:
                     self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
                              cas, ip4)
 
-def ParseConfig():
+def parse_config():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", help="load configuration from a file",
                         dest="config_file", metavar="config_file")
@@ -173,7 +172,7 @@ def ParseConfig():
 
 def main():
 
-    ParseConfig()
+    parse_config()
     count = 0
     server = UdpServer(CONFIG["xmpp_username"], CONFIG["xmpp_password"],
                        CONFIG["xmpp_host"], CONFIG["ip4"])
@@ -187,6 +186,6 @@ def main():
             do_get_state(server.sock)
             last_time = time.time()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
