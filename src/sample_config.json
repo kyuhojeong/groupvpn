@@ -15,5 +15,6 @@
     "buf_size": 4096,
     "xmpp_username": "alice@ejabberd",
     "xmpp_password": "password",
-    "xmpp_host": "198.202.120.205"
+    "xmpp_host": "198.202.120.205",
+    "tincan_path": "../../trunk/out/Release/ipop-tincan-errorneous"
 }
