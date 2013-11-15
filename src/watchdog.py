@@ -53,7 +53,7 @@ class WatchDog:
             self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         else:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(("", 5899))
+        self.sock.bind(("", 0))
         self.inactive_time = time.time()
 
     def watch(self):
