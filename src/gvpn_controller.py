@@ -107,6 +107,7 @@ class UdpServer:
             self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         else:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("", CONFIG["controller_port"]))
         self.ctrl_conn_init()
 
