@@ -76,9 +76,6 @@ def main():
 
     signal.signal(signal.SIGINT, exit_handler)
 
-    #global tincan_process
-    #global tincan_bin
-
     watchdog = WatchDog()
 
     tincan_path = CONFIG["tincan_path"]
@@ -132,9 +129,7 @@ def main():
                 tincan_process = subprocess.Popen([tincan_bin], 
                         stdout=subprocess.PIPE, stderr=core_log)
                 time.sleep(1)
-            #server.ctrl_conn_init()
-            server = UdpServer(CONFIG["xmpp_username"], CONFIG["xmpp_password"],
-                     CONFIG["xmpp_host"], CONFIG["ip4"])
+            server.ctrl_conn_init()
             watchdog.inactive_time = time.time()
 
 if __name__  == "__main__":
