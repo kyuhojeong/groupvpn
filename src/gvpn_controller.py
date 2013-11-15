@@ -128,7 +128,7 @@ class UdpServer:
                     do_trim_link(self.sock, k)
 
     def serve(self):
-        socks = select.select([self.sock], [], [], 0.3)
+        socks = select.select([self.sock], [], [], CONFIG["wait_time"])
         for sock in socks[0]:
             data, addr = sock.recvfrom(CONFIG["buf_size"])
             if data[0] == '{':

@@ -57,7 +57,7 @@ class WatchDog:
         self.inactive_time = time.time()
 
     def watch(self):
-        socks = select.select([self.sock], [], [], 0.3)
+        socks = select.select([self.sock], [], [], CONFIG["wait_time"])
         if not socks[0]: # Check if the socks is empty
             if time.time() - self.inactive_time > 60:
                 logging.debug("TinCan is inactive for 60s")
