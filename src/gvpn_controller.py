@@ -34,7 +34,6 @@ CONFIG = {
     "buf_size": 4096,
 }
 
-
 logging.basicConfig(level=logging.DEBUG)
 
 def gen_ip6(uid, ip6=None):
@@ -99,16 +98,23 @@ class UdpServer:
     def __init__(self, user, password, host, ip4):
         self.state = {}
         self.peers = {}
+        self.user = user
+        self.password = password
+        self.host = host
+        self.ip4 = ip4
+        self.uid = gen_uid(ip4)
         if socket.has_ipv6:
             self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         else:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("", CONFIG["controller_port"]))
-        uid = gen_uid(ip4)
+        self.ctrl_conn_init()
+
+    def ctrl_conn_init(self):
         do_set_logging(self.sock)
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
-        do_set_local_ip(self.sock, uid, ip4, gen_ip6(uid))
-        do_register_service(self.sock, user, password, host)
+        do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid))
+        do_register_service(self.sock, self.user, self.password, self.host)
         do_get_state(self.sock)
 
     def create_connection(self, uid, data, nid, sec, cas, ip4):
@@ -142,8 +148,7 @@ class UdpServer:
                     self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
                              cas, ip4)
 
-def main():
-
+def parse_config():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", help="load configuration from a file",
                         dest="config_file", metavar="config_file")
@@ -165,6 +170,9 @@ def main():
         prompt = "\nPassword for %s: " % CONFIG["xmpp_username"]
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
 
+def main():
+
+    parse_config()
     count = 0
     server = UdpServer(CONFIG["xmpp_username"], CONFIG["xmpp_password"],
                        CONFIG["xmpp_host"], CONFIG["ip4"])
@@ -178,6 +186,6 @@ def main():
             do_get_state(server.sock)
             last_time = time.time()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
