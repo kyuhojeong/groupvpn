@@ -15,12 +15,7 @@ import time
 CONFIG = {
     "stun": ["stun.l.google.com:19302", "stun1.l.google.com:19302",
              "stun2.l.google.com:19302", "stun3.l.google.com:19302",
-             "stun4.l.google.com:19302", "stun01.sipphone.com",
-             "stun.ekiga.net", "stun.fwdnet.net", "stun.ideasip.com",
-             "stun.iptel.org", "stun.rixtelecom.se", "stun.schlund.de",
-             "stunserver.org", "stun.softjoys.com", "stun.voiparound.com",
-             "stun.voipbuster.com", "stun.voipstunt.com", "stun.voxgratia.org",
-             "stun.xten.com"],
+             "stun4.l.google.com:19302"],
     "turn": [],  # Contains dicts with "server", "user", "pass" keys
     "ip4": "172.16.0.1",
     "localhost": "127.0.0.1",
