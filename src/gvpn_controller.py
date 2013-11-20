@@ -36,6 +36,16 @@ CONFIG = {
 
 logging.basicConfig(level=logging.DEBUG)
 
+uid_ip_table = {}
+def gen_uid_ip_table(ip4):
+    parts = ip4.split(".")
+    ip_prefix = parts[0] + "." + parts[1] + "."
+    for i in range(0, 255):
+        for j in range(0, 255):
+            ip = ip_prefix + str(i) + "." + str(j)
+            uid = gen_uid(ip)
+            uid_ip_table[uid] = ip
+
 def gen_ip6(uid, ip6=None):
     if ip6 is None:
         ip6 = CONFIG["ip6_prefix"]
@@ -44,13 +54,6 @@ def gen_ip6(uid, ip6=None):
 
 def gen_uid(ip4):
     return hashlib.sha1(ip4).hexdigest()[:CONFIG["uid_size"]]
-
-def get_ip4(uid, ip4):
-    parts = ip4.split(".")
-    ip4 = parts[0] + "." + parts[1] + "." + parts[2] + "."
-    for i in range(1, 255):
-        if uid == gen_uid(ip4 + str(i)): return ip4 + str(i)
-    return None
 
 def make_call(sock, **params):
     if socket.has_ipv6: dest = (CONFIG["localhost6"], CONFIG["svpn_port"])
@@ -144,7 +147,7 @@ class UdpServer:
                     fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
                     cas = msg["data"][fpr_len + 1:]
-                    ip4 = get_ip4(msg["uid"], self.state["_ip4"])
+                    ip4 = uid_ip_table[msg["uid"]]
                     self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
                              cas, ip4)
 
@@ -173,6 +176,7 @@ def parse_config():
 def main():
 
     parse_config()
+    gen_uid_ip_table(CONFIG["ip4"])
     count = 0
     server = UdpServer(CONFIG["xmpp_username"], CONFIG["xmpp_password"],
                        CONFIG["xmpp_host"], CONFIG["ip4"])
