@@ -36,16 +36,6 @@ CONFIG = {
 
 logging.basicConfig(level=logging.DEBUG)
 
-uid_ip_table = {}
-def gen_uid_ip_table(ip4):
-    parts = ip4.split(".")
-    ip_prefix = parts[0] + "." + parts[1] + "."
-    for i in range(0, 255):
-        for j in range(0, 255):
-            ip = ip_prefix + str(i) + "." + str(j)
-            uid = gen_uid(ip)
-            uid_ip_table[uid] = ip
-
 def gen_ip6(uid, ip6=None):
     if ip6 is None:
         ip6 = CONFIG["ip6_prefix"]
@@ -113,6 +103,15 @@ class UdpServer:
         self.sock.bind(("", CONFIG["controller_port"]))
         self.ctrl_conn_init()
 
+        self.uid_ip_table = {}
+        parts = CONFIG["ip4"].split(".")
+        ip_prefix = parts[0] + "." + parts[1] + "."
+        for i in range(0, 255):
+            for j in range(0, 255):
+                ip = ip_prefix + str(i) + "." + str(j)
+                uid = gen_uid(ip)
+                self.uid_ip_table[uid] = ip
+
     def ctrl_conn_init(self):
         do_set_logging(self.sock)
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
@@ -147,7 +146,7 @@ class UdpServer:
                     fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
                     cas = msg["data"][fpr_len + 1:]
-                    ip4 = uid_ip_table[msg["uid"]]
+                    ip4 = self.uid_ip_table[msg["uid"]]
                     self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
                              cas, ip4)
 
@@ -176,7 +175,6 @@ def parse_config():
 def main():
 
     parse_config()
-    gen_uid_ip_table(CONFIG["ip4"])
     count = 0
     server = UdpServer(CONFIG["xmpp_username"], CONFIG["xmpp_password"],
                        CONFIG["xmpp_host"], CONFIG["ip4"])
