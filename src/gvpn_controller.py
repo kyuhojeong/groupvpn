@@ -22,7 +22,6 @@ CONFIG = {
     "ip6_prefix": "fd50:0dbc:41f2:4a3c",
     "localhost6": "::1",
     "svpn_port": 5800,
-    "controller_port": 5801,
     "uid_size": 40,
     "sec": True,
     "wait_time": 30,
@@ -95,7 +94,7 @@ class UdpServer:
             self.sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
         else:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(("", CONFIG["controller_port"]))
+        self.sock.bind(("", 0))
         self.ctrl_conn_init()
 
         self.uid_ip_table = {}
