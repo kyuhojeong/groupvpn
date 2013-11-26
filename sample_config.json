@@ -8,7 +8,6 @@
     "ip6_prefix": "fd50:0dbc:41f2:4a3c",
     "localhost6": "::1",
     "svpn_port": 5800,
-    "controller_port": 5801,
     "uid_size": 40,
     "sec": true,
     "wait_time": 30,
