@@ -16,5 +16,6 @@
     "xmpp_password": "password",
     "xmpp_host": "198.202.120.205",
     "tincan_path": "../../trunk/out/Release/ipop-tincan",
-    "on-demand_connection": false
+    "on-demand_connection": true,
+    "on-demand_inactive_timeout": 600
 }

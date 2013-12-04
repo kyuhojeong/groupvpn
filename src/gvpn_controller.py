@@ -8,6 +8,7 @@ import logging
 import random
 import select
 import socket 
+import struct
 import sys
 import time
 
@@ -44,6 +45,9 @@ def make_call(sock, **params):
     if socket.has_ipv6: dest = (CONFIG["localhost6"], CONFIG["svpn_port"])
     else: dest = (CONFIG["localhost"], CONFIG["svpn_port"])
     return sock.sendto(json.dumps(params), dest)
+
+def do_send_msg(sock, overlay_id, uid, data):
+    return make_call(sock, m="send_msg", overlay_id=overlay_id, uid=uid, data=data)
 
 def do_set_cb_endpoint(sock, addr):
     return make_call(sock, m="set_cb_endpoint", ip=addr[0], port=addr[1])
@@ -87,6 +91,7 @@ def do_set_logging(sock):
 class UdpServer:
     def __init__(self, user, password, host, ip4):
         self.state = {}
+        self.idle_peers = {}
         self.peers = {}
         self.user = user
         self.password = password
@@ -132,6 +137,44 @@ class UdpServer:
             if "fpr" in v and v["status"] == "offline":
                 if v["last_time"] > CONFIG["wait_time"] * 2:
                     do_trim_link(self.sock, k)
+            if CONFIG["on-demand_connection"] and v["status"] == "online": 
+                if v["last_active"] < time.time() +\
+                        CONFIG["on-demand_inactive_timeout"]:
+                    do_trim_link(self.sock, k)
+ 
+    def ondemand_create_connection(self, uid, send_req):
+        logging.debug("idle peers {0}".format(self.idle_peers))
+        peer = self.idle_peers[uid]
+        fpr_len = len(self.state["_fpr"])
+        fpr = peer["data"][:fpr_len]
+        cas = peer["data"][fpr_len + 1:]
+        ip4 = self.uid_ip_table[peer["uid"]]
+        logging.debug("Start mutual creating connection")
+        if send_req:
+            do_send_msg(self.sock, 1, uid, fpr)
+        self.create_connection(peer["uid"], fpr, 1, CONFIG["sec"], cas, ip4)
+
+    def create_connection_req(self, data):
+        version_ihl = struct.unpack('!B', data[54:55])
+        version = version_ihl[0] >> 4
+        if version == 4:
+            s_addr = socket.inet_ntoa(data[66:70])
+            d_addr = socket.inet_ntoa(data[70:74])
+        elif version == 6:
+            s_addr = socket.inet_ntop(socket.AF_INET6, data[62:78])
+            d_addr = socket.inet_ntop(socket.AF_INET6, data[78:94])
+            # At present, we do not handle ipv6 multicast
+            if d_addr.startswith("ff02"):
+                return
+
+        uid = gen_uid(d_addr)
+        try:
+            msg = self.idle_peers[uid]
+        except KeyError:
+            logging.error("Peer {0} is not logged in".format(d_addr))
+            return
+        logging.debug("idle_peers[uid] --- {0}".format(msg))
+        self.ondemand_create_connection(uid, send_req=True)
 
     def serve(self):
         socks = select.select([self.sock], [], [], CONFIG["wait_time"])
@@ -143,16 +186,52 @@ class UdpServer:
                 msg_type = msg.get("type", None)
 
                 if msg_type == "local_state": self.state = msg
-                elif msg_type == "peer_state": self.peers[msg["uid"]] = msg
+                elif msg_type == "peer_state": 
+                    if msg["status"] == "offline":
+                        self.peers[msg["uid"]] = msg
+                        return
+                    stats = msg["stats"]
+                    stat = stats.split(' ')
+                    total_byte = 0
+                    for info in stat:
+                        if len(info.split(':')) > 9:
+                            total_byte += int(info.split(':')[6]) +\
+                                             int(info.split(':')[8])
+                    msg["total_byte"]=total_byte
+                    if (not msg["uid"] in self.peers) or \
+                      msg["total_byte"] > self.peers[msg["uid"]]["total_byte"]:
+                        msg["last_active"]=time.time()
+                    else:
+                        msg["last_active"]=self.peers[msg["uid"]]["last_active"]
+                    self.peers[msg["uid"]] = msg
+
                 # we ignore connection status notification for now
                 elif msg_type == "con_stat": pass
-                elif msg_type == "con_req" or msg_type == "con_resp":
+                elif msg_type == "con_req": 
+                    if CONFIG["on-demand_connection"]: 
+                        self.idle_peers[msg["uid"]]=msg
+                elif msg_type == "con_resp":
                     fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
                     cas = msg["data"][fpr_len + 1:]
                     ip4 = self.uid_ip_table[msg["uid"]]
                     self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
-                             cas, ip4)
+                          cas, ip4)
+
+                # send message is used as "request for start mutual connection"
+                elif msg_type == "send_msg": 
+                    if CONFIG["on-demand_connection"]:
+                        self.ondemand_create_connection(msg["uid"], false)
+               
+            # If a packet that is destined to yet no p2p connection established
+            # node, the packet as a whole is forwarded to controller
+            else:
+                if not CONFIG["on-demand_connection"]:
+                    return
+                if len(data) < 16:
+                    return
+                self.create_connection_req(data)
+                 
 
 def parse_config():
     parser = argparse.ArgumentParser()
