@@ -26,6 +26,7 @@ CONFIG = {
     "sec": True,
     "wait_time": 30,
     "buf_size": 4096,
+    "router_mode": False
 }
 
 logging.basicConfig(level=logging.DEBUG)
@@ -68,9 +69,11 @@ def do_create_link(sock, uid, fpr, overlay_id, sec, cas, stun=None, turn=None):
 def do_trim_link(sock, uid):
     return make_call(sock, m="trim_link", uid=uid)
 
-def do_set_local_ip(sock, uid, ip4, ip6, ip4_mask=24, ip6_mask=64):
+def do_set_local_ip(sock, uid, ip4, ip6, ip4_mask=24, ip6_mask=64,
+                    subnet_mask=32):
     return make_call(sock, m="set_local_ip", uid=uid, ip4=ip4, ip6=ip6,
-                     ip4_mask=ip4_mask, ip6_mask=ip6_mask)
+                     ip4_mask=ip4_mask, ip6_mask=ip6_mask,
+                     subnet_mask=subnet_mask)
 
 def do_set_remote_ip(sock, uid, ip4, ip6):
     return make_call(sock, m="set_remote_ip", uid=uid, ip4=ip4, ip6=ip6)
@@ -109,7 +112,14 @@ class UdpServer:
     def ctrl_conn_init(self):
         do_set_logging(self.sock)
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
-        do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid))
+
+        if not CONFIG["router_mode"]:
+            do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid))
+        else:
+            do_set_local_ip(self.sock, self.uid, CONFIG["router_ip"],
+                           gen_ip6(self.uid), CONFIG["router_ip4_mask"],
+                           CONFIG["router_ip6_mask"], CONFIG["subnet_mask"])
+
         do_register_service(self.sock, self.user, self.password, self.host)
         do_get_state(self.sock)
 
