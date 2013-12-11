@@ -1,7 +1,4 @@
-groupvpn
+GroupVPN
 ========
-##Running GroupVPN
- - [Running SocialVPN or GroupVPN on Linux](https://github.com/ipop-project/ipop-tincan/wiki/Running-SocialVPN-or-GroupVPN-on-Linux)
-
-##Running GroupVPN in WatchDog mode
- - [Running GroupVPN in WatchDog mode](https://github.com/ipop-project/groupvpn/wiki/Running-groupvpn-in-watchdog-mode)
+For information on the GroupVPN, please refer to the [IPOP project Web site](http://www.ipop-project.org)
+For documentation on building and running GroupVPN, please refer to the [IPOP project GitHub Wiki](https://github.com/ipop-project/documentation/wiki)
