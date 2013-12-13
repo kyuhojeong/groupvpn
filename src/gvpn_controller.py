@@ -200,6 +200,13 @@ class UdpServer:
                 elif msg_type == "con_req": 
                     if CONFIG["on-demand_connection"]: 
                         self.idle_peers[msg["uid"]]=msg
+                    else:
+                        fpr_len = len(self.state["_fpr"])
+                        fpr = msg["data"][:fpr_len]
+                        cas = msg["data"][fpr_len + 1:]
+                        ip4 = self.uid_ip_table[msg["uid"]]
+                        self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
+                              cas, ip4)
                 elif msg_type == "con_resp":
                     fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
