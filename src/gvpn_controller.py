@@ -27,6 +27,7 @@ CONFIG = {
     "sec": True,
     "wait_time": 30,
     "buf_size": 4096,
+    "logging": 1,
     "router_mode": False,
     "on-demand_connection" : False,
     "on-demand_inactive_timeout" : 600,
@@ -86,8 +87,8 @@ def do_set_remote_ip(sock, uid, ip4, ip6):
 def do_get_state(sock):
     return make_call(sock, m="get_state")
 
-def do_set_logging(sock):
-    return make_call(sock, m="set_logging", flag=1)
+def do_set_logging(sock, logging):
+    return make_call(sock, m="set_logging", logging=logging)
 
 class UdpServer:
     def __init__(self, user, password, host, ip4):
@@ -116,7 +117,7 @@ class UdpServer:
                 self.uid_ip_table[uid] = ip
 
     def ctrl_conn_init(self):
-        do_set_logging(self.sock)
+        do_set_logging(self.sock, CONFIG["logging"])
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
 
         if not CONFIG["router_mode"]:
