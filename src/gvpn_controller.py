@@ -249,11 +249,9 @@ def parse_config():
 
     if args.config_file:
         # Load the config file
-        #logging.debug("Loading config file %s" % args.config_file)
         with open(args.config_file) as f:
             loaded_config = json.load(f)
         CONFIG.update(loaded_config)
-    #logging.debug("Configuration:\n%s" % CONFIG)
 
     if not ("xmpp_username" in CONFIG and "xmpp_host" in CONFIG):
         raise ValueError("At least 'xmpp_username' and 'xmpp_host' must be "
