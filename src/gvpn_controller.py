@@ -27,10 +27,11 @@ CONFIG = {
     "sec": True,
     "wait_time": 30,
     "buf_size": 4096,
-    "router_mode": False
+    "router_mode": False,
+    "on-demand_connection" : False,
+    "on-demand_inactive_timeout" : 600,
+    "logging_level" : "logging.INFO"
 }
-
-logging.basicConfig(level=logging.DEBUG)
 
 def gen_ip6(uid, ip6=None):
     if ip6 is None:
@@ -228,7 +229,7 @@ class UdpServer:
                 # send message is used as "request for start mutual connection"
                 elif msg_type == "send_msg": 
                     if CONFIG["on-demand_connection"]:
-                        self.ondemand_create_connection(msg["uid"], false)
+                        self.ondemand_create_connection(msg["uid"], False)
                
             # If a packet that is destined to yet no p2p connection established
             # node, the packet as a whole is forwarded to controller
@@ -248,11 +249,9 @@ def parse_config():
 
     if args.config_file:
         # Load the config file
-        logging.debug("Loading config file %s" % args.config_file)
         with open(args.config_file) as f:
             loaded_config = json.load(f)
         CONFIG.update(loaded_config)
-    logging.debug("Configuration:\n%s" % CONFIG)
 
     if not ("xmpp_username" in CONFIG and "xmpp_host" in CONFIG):
         raise ValueError("At least 'xmpp_username' and 'xmpp_host' must be "
@@ -261,6 +260,9 @@ def parse_config():
     if "xmpp_password" not in CONFIG:
         prompt = "\nPassword for %s: " % CONFIG["xmpp_username"]
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
+
+    if "logging_level" in CONFIG:
+        logging.basicConfig(level=eval(CONFIG["logging_level"]))
 
 def main():
 
