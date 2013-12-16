@@ -228,7 +228,7 @@ class UdpServer:
                 # send message is used as "request for start mutual connection"
                 elif msg_type == "send_msg": 
                     if CONFIG["on-demand_connection"]:
-                        self.ondemand_create_connection(msg["uid"], false)
+                        self.ondemand_create_connection(msg["uid"], False)
                
             # If a packet that is destined to yet no p2p connection established
             # node, the packet as a whole is forwarded to controller
@@ -261,6 +261,12 @@ def parse_config():
     if "xmpp_password" not in CONFIG:
         prompt = "\nPassword for %s: " % CONFIG["xmpp_username"]
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
+
+    if "on-demand_connection" not in CONFIG:
+        CONFIG["on-demand_connection"] = False
+
+    if "on-demand_inactive_timeout" not in CONFIG:
+        CONFIG["on-demand_inactive_timeout"] = 600
 
 def main():
 
