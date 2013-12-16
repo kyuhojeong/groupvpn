@@ -27,10 +27,11 @@ CONFIG = {
     "sec": True,
     "wait_time": 30,
     "buf_size": 4096,
-    "router_mode": False
+    "router_mode": False,
+    "on-demand_connection" : False,
+    "on-demand_inactive_timeout" : 600,
+    "logging_level" : "logging.INFO"
 }
-
-logging.basicConfig(level=logging.DEBUG)
 
 def gen_ip6(uid, ip6=None):
     if ip6 is None:
@@ -248,11 +249,11 @@ def parse_config():
 
     if args.config_file:
         # Load the config file
-        logging.debug("Loading config file %s" % args.config_file)
+        #logging.debug("Loading config file %s" % args.config_file)
         with open(args.config_file) as f:
             loaded_config = json.load(f)
         CONFIG.update(loaded_config)
-    logging.debug("Configuration:\n%s" % CONFIG)
+    #logging.debug("Configuration:\n%s" % CONFIG)
 
     if not ("xmpp_username" in CONFIG and "xmpp_host" in CONFIG):
         raise ValueError("At least 'xmpp_username' and 'xmpp_host' must be "
@@ -262,11 +263,8 @@ def parse_config():
         prompt = "\nPassword for %s: " % CONFIG["xmpp_username"]
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
 
-    if "on-demand_connection" not in CONFIG:
-        CONFIG["on-demand_connection"] = False
-
-    if "on-demand_inactive_timeout" not in CONFIG:
-        CONFIG["on-demand_inactive_timeout"] = 600
+    if "logging_level" in CONFIG:
+        logging.basicConfig(level=eval(CONFIG["logging_level"]))
 
 def main():
 
