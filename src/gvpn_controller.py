@@ -140,8 +140,9 @@ class UdpServer:
                 if v["last_time"] > CONFIG["wait_time"] * 2:
                     do_trim_link(self.sock, k)
             if CONFIG["on-demand_connection"] and v["status"] == "online": 
-                if v["last_active"] < time.time() +\
-                        CONFIG["on-demand_inactive_timeout"]:
+                if v["last_active"] + CONFIG["on-demand_inactive_timeout"]\
+                                                              < time.time():
+                    logging.debug("Inactive, trimming node:{0}".format(k))
                     do_trim_link(self.sock, k)
  
     def ondemand_create_connection(self, uid, send_req):
@@ -200,11 +201,16 @@ class UdpServer:
                             total_byte += int(info.split(':')[6]) +\
                                              int(info.split(':')[8])
                     msg["total_byte"]=total_byte
-                    if (not msg["uid"] in self.peers) or \
-                      msg["total_byte"] > self.peers[msg["uid"]]["total_byte"]:
+                    logging.debug("self.peers:{0}".format(self.peers))
+                    if not msg["uid"] in self.peers:
                         msg["last_active"]=time.time()
                     else:
-                        msg["last_active"]=self.peers[msg["uid"]]["last_active"]
+                        if msg["total_byte"] > \
+                                        self.peers[msg["uid"]]["total_byte"]:
+                            msg["last_active"]=time.time()
+                        else:
+                            msg["last_active"]=\
+                                         self.peers[msg["uid"]]["last_active"]
                     self.peers[msg["uid"]] = msg
 
                 # we ignore connection status notification for now
