@@ -243,10 +243,6 @@ class UdpServer:
             # If a packet that is destined to yet no p2p connection established
             # node, the packet as a whole is forwarded to controller
             else:
-                logging.debug("Raw packet is forwarded from Tap")
-                #print data
-                #print ":".join("{0:x}".format(ord(c)) for c in data)
-                logging.debug("".join("{0:02x} ".format(ord(c)) for c in data))
                 if not CONFIG["on-demand_connection"]:
                     return
                 if len(data) < 16:
