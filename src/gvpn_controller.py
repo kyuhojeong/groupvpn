@@ -204,6 +204,8 @@ class UdpServer:
                     logging.debug("self.peers:{0}".format(self.peers))
                     if not msg["uid"] in self.peers:
                         msg["last_active"]=time.time()
+                    elif not "total_byte" in self.peers[msg["uid"]]:
+                        msg["last_active"]=time.time()
                     else:
                         if msg["total_byte"] > \
                                         self.peers[msg["uid"]]["total_byte"]:
@@ -241,12 +243,15 @@ class UdpServer:
             # If a packet that is destined to yet no p2p connection established
             # node, the packet as a whole is forwarded to controller
             else:
+                logging.debug("Raw packet is forwarded from Tap")
+                #print data
+                #print ":".join("{0:x}".format(ord(c)) for c in data)
+                logging.debug("".join("{0:02x} ".format(ord(c)) for c in data))
                 if not CONFIG["on-demand_connection"]:
                     return
                 if len(data) < 16:
                     return
                 self.create_connection_req(data)
-                 
 
 def parse_config():
     parser = argparse.ArgumentParser()
