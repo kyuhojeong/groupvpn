@@ -204,6 +204,8 @@ class UdpServer:
                     logging.debug("self.peers:{0}".format(self.peers))
                     if not msg["uid"] in self.peers:
                         msg["last_active"]=time.time()
+                    elif not "total_byte" in self.peers[msg["uid"]]:
+                        msg["last_active"]=time.time()
                     else:
                         if msg["total_byte"] > \
                                         self.peers[msg["uid"]]["total_byte"]:
@@ -246,7 +248,6 @@ class UdpServer:
                 if len(data) < 16:
                     return
                 self.create_connection_req(data)
-                 
 
 def parse_config():
     parser = argparse.ArgumentParser()
