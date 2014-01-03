@@ -71,7 +71,6 @@ def do_create_link(sock, uid, fpr, overlay_id, sec, cas, stun=None, turn=None):
                      turn_user=turn["user"],
                      turn_pass=turn["pass"], sec=sec, cas=cas)
 
-
 def do_trim_link(sock, uid):
     return make_call(sock, m="trim_link", uid=uid)
 
@@ -138,11 +137,13 @@ class UdpServer:
         for k, v in self.peers.iteritems():
             if "fpr" in v and v["status"] == "offline":
                 if v["last_time"] > CONFIG["wait_time"] * 2:
+                    do_send_msg(self.sock, 1, k, "destroy" + self.state["_uid"])
                     do_trim_link(self.sock, k)
             if CONFIG["on-demand_connection"] and v["status"] == "online": 
                 if v["last_active"] + CONFIG["on-demand_inactive_timeout"]\
                                                               < time.time():
                     logging.debug("Inactive, trimming node:{0}".format(k))
+                    do_send_msg(self.sock, 1, k, "destroy" + self.state["_uid"])
                     do_trim_link(self.sock, k)
  
     def ondemand_create_connection(self, uid, send_req):
@@ -238,7 +239,10 @@ class UdpServer:
                 # send message is used as "request for start mutual connection"
                 elif msg_type == "send_msg": 
                     if CONFIG["on-demand_connection"]:
-                        self.ondemand_create_connection(msg["uid"], False)
+                        if msg["data"].startswith("destroy"):
+                            do_trim_link(self.sock, msg["uid"])
+                        else:
+                            self.ondemand_create_connection(msg["uid"], False)
                
             # If a packet that is destined to yet no p2p connection established
             # node, the packet as a whole is forwarded to controller
