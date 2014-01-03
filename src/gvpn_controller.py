@@ -138,7 +138,7 @@ class UdpServer:
         for k, v in self.peers.iteritems():
             if "fpr" in v and v["status"] == "offline":
                 if v["last_time"] > CONFIG["wait_time"] * 2:
-                    do_send_msg(self.sock, 1, k, "destroy"+self.stata[_uid])
+                    do_send_msg(self.sock, 1, k, "destroy"+self.state[_uid])
                     do_trim_link(self.sock, k)
             if CONFIG["on-demand_connection"] and v["status"] == "online": 
                 if v["last_active"] + CONFIG["on-demand_inactive_timeout"]\
