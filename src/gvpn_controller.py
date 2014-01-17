@@ -30,11 +30,11 @@ CONFIG = {
     "sec": True,
     "wait_time": 30,
     "buf_size": 4096,
-    "logging": 1,
+    "tincan_logging": 1,
+    "controller_logging" : "logging.INFO",
     "router_mode": False,
     "on-demand_connection" : False,
-    "on-demand_inactive_timeout" : 600,
-    "logging_level" : "logging.INFO"
+    "on-demand_inactive_timeout" : 600
 }
 
 def gen_ip6(uid, ip6=None):
@@ -118,7 +118,7 @@ class UdpServer:
                 self.uid_ip_table[uid] = ip
 
     def ctrl_conn_init(self):
-        do_set_logging(self.sock, CONFIG["logging"])
+        do_set_logging(self.sock, CONFIG["tincan_logging"])
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
         do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid),
                         CONFIG["ip4_mask"], CONFIG["ip6_mask"],
@@ -270,8 +270,8 @@ def parse_config():
         prompt = "\nPassword for %s: " % CONFIG["xmpp_username"]
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
 
-    if "logging_level" in CONFIG:
-        logging.basicConfig(level=eval(CONFIG["logging_level"]))
+    if "controller_logging" in CONFIG:
+        logging.basicConfig(level=eval(CONFIG["controller_logging"]))
 
 def main():
 
