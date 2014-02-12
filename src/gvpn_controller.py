@@ -188,7 +188,7 @@ class UdpServer:
 
                 if msg_type == "local_state": self.state = msg
                 elif msg_type == "peer_state": 
-                    if msg["status"] == "offline":
+                    if msg["status"] == "offline" or "stats" not in msg:
                         self.peers[msg["uid"]] = msg
                         return
                     stats = msg["stats"]
