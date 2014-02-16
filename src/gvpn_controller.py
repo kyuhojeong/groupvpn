@@ -120,9 +120,16 @@ class UdpServer:
     def ctrl_conn_init(self):
         do_set_logging(self.sock, CONFIG["tincan_logging"])
         do_set_cb_endpoint(self.sock, self.sock.getsockname())
-        do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid),
-                        CONFIG["ip4_mask"], CONFIG["ip6_mask"],
-                        CONFIG["subnet_mask"])
+
+        if not CONFIG["router_mode"]:
+            do_set_local_ip(self.sock, self.uid, self.ip4, gen_ip6(self.uid),
+                             CONFIG["ip4_mask"], CONFIG["ip6_mask"],
+                             CONFIG["subnet_mask"])
+        else:
+            do_set_local_ip(self.sock, self.uid, CONFIG["router_ip"],
+                           gen_ip6(self.uid), CONFIG["router_ip4_mask"],
+                           CONFIG["router_ip6_mask"], CONFIG["subnet_mask"])
+
         do_register_service(self.sock, self.user, self.password, self.host)
         do_get_state(self.sock)
 
