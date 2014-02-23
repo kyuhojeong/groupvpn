@@ -278,7 +278,8 @@ def parse_config():
         CONFIG["xmpp_password"] = getpass.getpass(prompt)
 
     if "controller_logging" in CONFIG:
-        logging.basicConfig(level=eval(CONFIG["controller_logging"]))
+        level = getattr(logging, CONFIG["controller_logging"])
+        logging.basicConfig(level=level)
 
 def main():
 
