@@ -31,7 +31,7 @@ CONFIG = {
     "wait_time": 30,
     "buf_size": 4096,
     "tincan_logging": 1,
-    "controller_logging" : "logging.INFO",
+    "controller_logging" : "INFO",
     "router_mode": False,
     "on-demand_connection" : False,
     "on-demand_inactive_timeout" : 600
