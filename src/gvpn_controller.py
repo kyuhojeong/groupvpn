@@ -28,7 +28,7 @@ CONFIG = {
     "svpn_port": 5800,
     "uid_size": 40,
     "sec": True,
-    "wait_time": 30,
+    "wait_time": 15,
     "buf_size": 4096,
     "tincan_logging": 1,
     "controller_logging" : "INFO",
@@ -51,14 +51,14 @@ def make_call(sock, **params):
     else: dest = (CONFIG["localhost"], CONFIG["svpn_port"])
     return sock.sendto(json.dumps(params), dest)
 
-def do_send_msg(sock, overlay_id, uid, data):
-    return make_call(sock, m="send_msg", overlay_id=overlay_id, uid=uid, data=data)
+def do_send_msg(sock, method, overlay_id, uid, data):
+    return make_call(sock, m=method, overlay_id=overlay_id, uid=uid, data=data)
 
 def do_set_cb_endpoint(sock, addr):
     return make_call(sock, m="set_cb_endpoint", ip=addr[0], port=addr[1])
 
 def do_register_service(sock, username, password, host):
-    return make_call(sock, m="register_service", username=username,
+    return make_call(sock, m="register_svc", username=username,
                      password=password, host=host)
 
 def do_create_link(sock, uid, fpr, overlay_id, sec, cas, stun=None, turn=None):
@@ -86,7 +86,7 @@ def do_set_remote_ip(sock, uid, ip4, ip6):
     return make_call(sock, m="set_remote_ip", uid=uid, ip4=ip4, ip6=ip6)
 
 def do_get_state(sock):
-    return make_call(sock, m="get_state")
+    return make_call(sock, m="get_state", stats=True)
 
 def do_set_logging(sock, logging):
     return make_call(sock, m="set_logging", logging=logging)
@@ -96,6 +96,7 @@ class UdpServer:
         self.state = {}
         self.idle_peers = {}
         self.peers = {}
+        self.conn_stat = {}
         self.user = user
         self.password = password
         self.host = host
@@ -141,13 +142,15 @@ class UdpServer:
         for k, v in self.peers.iteritems():
             if "fpr" in v and v["status"] == "offline":
                 if v["last_time"] > CONFIG["wait_time"] * 2:
-                    do_send_msg(self.sock, 1, k, "destroy" + self.state["_uid"])
+                    do_send_msg(self.sock, "send_msg", 1, k,
+                                "destroy" + self.state["_uid"])
                     do_trim_link(self.sock, k)
             if CONFIG["on-demand_connection"] and v["status"] == "online": 
                 if v["last_active"] + CONFIG["on-demand_inactive_timeout"]\
                                                               < time.time():
                     logging.debug("Inactive, trimming node:{0}".format(k))
-                    do_send_msg(self.sock, 1, k, "destroy" + self.state["_uid"])
+                    do_send_msg(self.sock, 1, "send_msg", k,
+                                "destroy" + self.state["_uid"])
                     do_trim_link(self.sock, k)
  
     def ondemand_create_connection(self, uid, send_req):
@@ -159,7 +162,7 @@ class UdpServer:
         ip4 = self.uid_ip_table[peer["uid"]]
         logging.debug("Start mutual creating connection")
         if send_req:
-            do_send_msg(self.sock, 1, uid, fpr)
+            do_send_msg(self.sock, "send_msg", 1, uid, fpr)
         self.create_connection(peer["uid"], fpr, 1, CONFIG["sec"], cas, ip4)
 
     def create_connection_req(self, data):
@@ -184,6 +187,25 @@ class UdpServer:
         logging.debug("idle_peers[uid] --- {0}".format(msg))
         self.ondemand_create_connection(uid, send_req=True)
 
+    def trigger_conn_request(self, peer):
+        if "fpr" not in peer and peer["xmpp_time"] < CONFIG["wait_time"] * 8:
+            self.conn_stat[peer["uid"]] = "req_sent"
+            do_send_msg(self.sock, "con_req", 1, peer["uid"],
+                        self.state["_fpr"]);
+
+    def check_collision(self, msg_type, uid):
+        if msg_type == "con_req" and \
+           self.conn_stat.get(uid, None) == "req_sent":
+            if uid > self.state["_uid"]:
+                do_trim_link(self.sock, uid)
+                self.conn_stat.pop(uid, None)
+                return False
+        elif msg_type == "con_resp":
+            self.conn_stat[uid] = "resp_recv"
+            return False
+        else:
+            return True
+
     def serve(self):
         socks = select.select([self.sock], [], [], CONFIG["wait_time"])
         for sock in socks[0]:
@@ -193,18 +215,18 @@ class UdpServer:
                 logging.debug("recv %s %s" % (addr, data))
                 msg_type = msg.get("type", None)
 
-                if msg_type == "local_state": self.state = msg
+                if msg_type == "local_state":
+                    self.state = msg
                 elif msg_type == "peer_state": 
                     if msg["status"] == "offline" or "stats" not in msg:
                         self.peers[msg["uid"]] = msg
-                        return
+                        self.trigger_conn_request(msg)
+                        continue
                     stats = msg["stats"]
-                    stat = stats.split(' ')
                     total_byte = 0
-                    for info in stat:
-                        if len(info.split(':')) > 9:
-                            total_byte += int(info.split(':')[6]) +\
-                                             int(info.split(':')[8])
+                    for stat in stats:
+                        total_byte += stat["sent_total_bytes"]
+                        total_byte += stat["recv_total_bytes"]
                     msg["total_byte"]=total_byte
                     logging.debug("self.peers:{0}".format(self.peers))
                     if not msg["uid"] in self.peers:
@@ -226,6 +248,7 @@ class UdpServer:
                     if CONFIG["on-demand_connection"]: 
                         self.idle_peers[msg["uid"]]=msg
                     else:
+                        if self.check_collision(msg_type,msg["uid"]): continue
                         fpr_len = len(self.state["_fpr"])
                         fpr = msg["data"][:fpr_len]
                         cas = msg["data"][fpr_len + 1:]
@@ -233,6 +256,7 @@ class UdpServer:
                         self.create_connection(msg["uid"], fpr, 1, CONFIG["sec"],
                               cas, ip4)
                 elif msg_type == "con_resp":
+                    if self.check_collision(msg_type, msg["uid"]): continue
                     fpr_len = len(self.state["_fpr"])
                     fpr = msg["data"][:fpr_len]
                     cas = msg["data"][fpr_len + 1:]
