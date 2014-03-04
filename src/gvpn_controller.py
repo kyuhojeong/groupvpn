@@ -201,7 +201,7 @@ class UdpServer:
                 self.conn_stat.pop(uid, None)
                 return False
         elif msg_type == "con_resp":
-            self.conn_stat[uid] = "rep_recv"
+            self.conn_stat[uid] = "resp_recv"
             return False
         else:
             return True
